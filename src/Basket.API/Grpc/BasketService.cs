@@ -2,13 +2,20 @@
 using eShop.Basket.API.Repositories;
 using eShop.Basket.API.Extensions;
 using eShop.Basket.API.Model;
+using System.Diagnostics.Metrics;
 
 namespace eShop.Basket.API.Grpc;
 
 public class BasketService(
     IBasketRepository repository,
-    ILogger<BasketService> logger) : Basket.BasketBase
-{
+    ILogger<BasketService> logger, 
+    Meter _meter) : Basket.BasketBase
+
+
+{    
+    private readonly Counter<int> addToCartCounter = _meter.CreateCounter<int>("basket_add_to_cart_total", "items", "Total number of items added to the cart");
+    private readonly Counter<int> checkoutStartedCounter = _meter.CreateCounter<int>("checkout_started_total", "orders", "Total number of checkouts started");
+
     [AllowAnonymous]
     public override async Task<CustomerBasketResponse> GetBasket(GetBasketRequest request, ServerCallContext context)
     {
@@ -48,6 +55,9 @@ public class BasketService(
 
         var customerBasket = MapToCustomerBasket(userId, request);
         var response = await repository.UpdateBasketAsync(customerBasket);
+
+        addToCartCounter.Add(1);
+        
         if (response is null)
         {
             ThrowBasketDoesNotExist(userId);
@@ -67,6 +77,8 @@ public class BasketService(
         await repository.DeleteBasketAsync(userId);
         return new();
     }
+
+
 
     [DoesNotReturn]
     private static void ThrowNotAuthenticated() => throw new RpcException(new Status(StatusCode.Unauthenticated, "The caller is not authenticated."));
