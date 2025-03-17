@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
+﻿using System.Diagnostics.Metrics;
+using Microsoft.AspNetCore.Http.HttpResults;
 using CardType = eShop.Ordering.API.Application.Queries.CardType;
 using Order = eShop.Ordering.API.Application.Queries.Order;
 
@@ -118,11 +119,21 @@ public static class OrdersApi
     public static async Task<Results<Ok, BadRequest<string>>> CreateOrderAsync(
         [FromHeader(Name = "x-requestid")] Guid requestId,
         CreateOrderRequest request,
-        [AsParameters] OrderServices services)
+        [AsParameters] OrderServices services,
+        Meter meter)
     {
-        
+
+        // Count orders placed
+        var checkoutCompletedcounter = meter.CreateCounter<int>(
+            "checkout_completed_total",
+            "orders",
+            description: "Total number of successfully placed orders."
+        );
+
+
         //mask the credit card number
-        
+
+
         services.Logger.LogInformation(
             "Sending command: {CommandName} - {IdProperty}: {CommandId}",
             request.GetGenericTypeName(),
@@ -156,6 +167,8 @@ public static class OrdersApi
 
             if (result)
             {
+
+                checkoutCompletedcounter.Add(1, new KeyValuePair<string, object>("userId", request.UserId));
                 services.Logger.LogInformation("CreateOrderCommand succeeded - RequestId: {RequestId}", requestId);
             }
             else

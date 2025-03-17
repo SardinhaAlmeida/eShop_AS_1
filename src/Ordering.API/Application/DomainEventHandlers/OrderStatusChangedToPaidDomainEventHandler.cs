@@ -1,4 +1,6 @@
-﻿namespace eShop.Ordering.API.Application.DomainEventHandlers;
+﻿using System.Diagnostics.Metrics;
+
+namespace eShop.Ordering.API.Application.DomainEventHandlers;
 
 public class OrderStatusChangedToPaidDomainEventHandler : INotificationHandler<OrderStatusChangedToPaidDomainEvent>
 {
@@ -11,7 +13,8 @@ public class OrderStatusChangedToPaidDomainEventHandler : INotificationHandler<O
         IOrderRepository orderRepository,
         ILogger<OrderStatusChangedToPaidDomainEventHandler> logger,
         IBuyerRepository buyerRepository,
-        IOrderingIntegrationEventService orderingIntegrationEventService)
+        IOrderingIntegrationEventService orderingIntegrationEventService,
+        Meter meter)
     {
         _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
